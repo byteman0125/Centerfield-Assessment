@@ -1,0 +1,506 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Schedule Calls - Wake-up Call Service{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-1">
+                <i class="fas fa-tachometer-alt me-3"></i>
+                Schedule Wake-up Calls
+            </h1>
+            <p class="text-muted mb-0">Set up personalized wake-up calls with weather updates</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if not user.is_phone_verified %}
+<div class="verification-alert mb-4">
+    <div class="alert alert-warning border-0 shadow-sm">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4 class="alert-heading mb-2">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Phone Verification Required
+                </h4>
+                <p class="mb-0">You need to verify your phone number before you can schedule wake-up calls. This is required for security and to ensure we can reach you.</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-warning btn-lg" id="verifyPhoneBtn">
+                    <i class="fas fa-mobile-alt me-2"></i>
+                    Verify Phone Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="schedule-card card shadow-sm">
+            <div class="card-header bg-light border-bottom">
+                <h5 class="mb-0">
+                    <i class="fas fa-alarm-clock me-2"></i>
+                    Schedule New Wake-up Call
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                {% if user.is_phone_verified %}
+                <form id="wakeupForm">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="scheduledTime" class="form-label fw-bold">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                When should we call you?
+                            </label>
+                            <input type="datetime-local" class="form-control form-control-lg" id="scheduledTime" required>
+                            <div class="form-text">Select the date and time for your wake-up call</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="contactMethod" class="form-label fw-bold">
+                                <i class="fas fa-phone me-2"></i>
+                                How should we contact you?
+                            </label>
+                            <select class="form-select form-select-lg" id="contactMethod">
+                                <option value="call">
+                                    📞 Phone Call - Interactive voice with weather updates
+                                </option>
+                                <option value="sms">
+                                    💬 Text Message - SMS with weather info
+                                </option>
+                            </select>
+                            <div class="form-text">Choose your preferred contact method</div>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="zipCode" class="form-label fw-bold">
+                            <i class="fas fa-map-marker-alt me-2"></i>
+                            ZIP Code for Weather Updates
+                        </label>
+                        <div class="input-group">
+                            <input type="text" class="form-control form-control-lg" id="zipCode" 
+                                   value="{{ user.profile.zip_code|default:'' }}" 
+                                   placeholder="Enter your ZIP code (e.g., 10001)" required>
+                            <span class="input-group-text">
+                                <i class="fas fa-cloud-sun"></i>
+                            </span>
+                        </div>
+                        <div class="form-text">We'll include current weather for this location</div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus-circle me-2"></i>
+                            Schedule Wake-up Call
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-lock fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted mb-3">Phone verification required</h4>
+                    <p class="text-muted mb-4">Please verify your phone number first to schedule wake-up calls.</p>
+                    <button class="btn btn-warning btn-lg" id="verifyPhoneBtn2">
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        Verify Phone Number
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="recent-calls-card card shadow-sm h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Recent Calls
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if wakeup_calls %}
+                    <div class="call-list">
+                        {% for call in wakeup_calls %}
+                        <div class="call-item border-bottom py-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="call-info">
+                                    <h6 class="mb-1 fw-bold">
+                                        {{ call.scheduled_time|date:"M d, g:i A" }}
+                                    </h6>
+                                    <small class="text-muted">
+                                        {% if call.contact_method == 'call' %}
+                                            <i class="fas fa-phone me-1"></i>
+                                        {% else %}
+                                            <i class="fas fa-sms me-1"></i>
+                                        {% endif %}
+                                        {{ call.contact_method|upper }} • {{ call.phone_number }}
+                                    </small>
+                                </div>
+                                <span class="badge bg-{% if call.status == 'scheduled' %}primary{% elif call.status == 'completed' %}success{% elif call.status == 'cancelled' %}secondary{% else %}warning{% endif %}">
+                                    {{ call.status|title }}
+                                </span>
+                            </div>
+                            <div class="call-location">
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    Weather for {{ call.zip_code }}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted mb-2">No calls scheduled yet</h6>
+                        <p class="text-muted small">Once you schedule your first call, it will appear here.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Help Card -->
+        <div class="help-card card shadow-sm mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Quick Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Phone calls include interactive menus
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        SMS includes weather summary
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        ZIP code determines weather location
+                    </li>
+                    <li>
+                        <i class="fas fa-check text-success me-2"></i>
+                        Calls are logged for your records
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Phone Verification Modal -->
+<div class="modal fade" id="phoneModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-mobile-alt me-2"></i>
+                    Verify Your Phone Number
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="phoneForm">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
+                        <h5>Phone Verification Required</h5>
+                        <p class="text-muted">We need to verify your phone number to send you wake-up calls and SMS messages.</p>
+                    </div>
+                    <div class="mb-4">
+                        <label for="phoneNumber" class="form-label fw-bold">
+                            <i class="fas fa-phone me-2"></i>
+                            Enter Your Phone Number
+                        </label>
+                        <div class="input-group">
+                            <input type="tel" class="form-control form-control-lg" id="phoneNumber" 
+                                   placeholder="+1 (555) 123-4567" required>
+                            <span class="input-group-text">
+                                <i class="fas fa-mobile-alt"></i>
+                            </span>
+                        </div>
+                        <div class="form-text">Use the format: +1 followed by your 10-digit number</div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-primary btn-lg" id="sendCodeBtn">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Send Verification Code
+                        </button>
+                    </div>
+                </div>
+                <div id="codeForm" style="display: none;">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-sms fa-3x text-success mb-3"></i>
+                        <h5>Check Your Phone</h5>
+                        <p class="text-muted">We sent a verification code to your phone number. Please enter it below.</p>
+                    </div>
+                    <div class="mb-4">
+                        <label for="verificationCode" class="form-label fw-bold">
+                            <i class="fas fa-key me-2"></i>
+                            Verification Code
+                        </label>
+                        <div class="input-group">
+                            <input type="text" class="form-control form-control-lg text-center" id="verificationCode" 
+                                   placeholder="123456" maxlength="6" required>
+                            <span class="input-group-text">
+                                <i class="fas fa-code"></i>
+                            </span>
+                        </div>
+                        <div class="form-text">Enter the 6-digit code you received via SMS</div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-success btn-lg" id="verifyCodeBtn">
+                            <i class="fas fa-check me-2"></i>
+                            Verify & Complete
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="resendCodeBtn">
+                            <i class="fas fa-redo me-2"></i>
+                            Resend Code
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const verifyPhoneBtn = document.getElementById('verifyPhoneBtn');
+    const verifyPhoneBtn2 = document.getElementById('verifyPhoneBtn2');
+    const phoneModal = new bootstrap.Modal(document.getElementById('phoneModal'));
+    const wakeupForm = document.getElementById('wakeupForm');
+    
+    // Handle both verification buttons
+    if (verifyPhoneBtn) {
+        verifyPhoneBtn.addEventListener('click', () => phoneModal.show());
+    }
+    if (verifyPhoneBtn2) {
+        verifyPhoneBtn2.addEventListener('click', () => phoneModal.show());
+    }
+    
+    if (wakeupForm) {
+        wakeupForm.addEventListener('submit', handleWakeupSubmit);
+    }
+    
+    // Phone verification handlers
+    const sendCodeBtn = document.getElementById('sendCodeBtn');
+    const verifyCodeBtn = document.getElementById('verifyCodeBtn');
+    const resendCodeBtn = document.getElementById('resendCodeBtn');
+    
+    if (sendCodeBtn) {
+        sendCodeBtn.addEventListener('click', sendVerificationCode);
+    }
+    if (verifyCodeBtn) {
+        verifyCodeBtn.addEventListener('click', verifyCode);
+    }
+    if (resendCodeBtn) {
+        resendCodeBtn.addEventListener('click', sendVerificationCode);
+    }
+    
+    // Auto-focus on verification code input when shown
+    const verificationCodeInput = document.getElementById('verificationCode');
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                const codeForm = document.getElementById('codeForm');
+                if (codeForm.style.display !== 'none' && verificationCodeInput) {
+                    verificationCodeInput.focus();
+                }
+            }
+        });
+    });
+    observer.observe(document.getElementById('codeForm'), { attributes: true });
+});
+
+async function sendVerificationCode() {
+    const phoneNumber = document.getElementById('phoneNumber').value;
+    const sendBtn = document.getElementById('sendCodeBtn');
+    const resendBtn = document.getElementById('resendCodeBtn');
+    
+    if (!phoneNumber || phoneNumber.length < 10) {
+        showNotification('Please enter a valid phone number', 'warning');
+        return;
+    }
+    
+    // Show loading state
+    if (sendBtn) {
+        sendBtn.classList.add('loading');
+        sendBtn.disabled = true;
+    }
+    if (resendBtn) {
+        resendBtn.classList.add('loading');
+        resendBtn.disabled = true;
+    }
+    
+    try {
+        const response = await fetch('/api/users/verify_phone/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify({ phone_number: phoneNumber }),
+        });
+        
+        if (response.ok) {
+            document.getElementById('phoneForm').style.display = 'none';
+            document.getElementById('codeForm').style.display = 'block';
+            showNotification('Verification code sent! Check your phone.', 'success');
+        } else {
+            const error = await response.json();
+            showNotification('Failed to send verification code: ' + (error.detail || 'Unknown error'), 'danger');
+        }
+    } catch (error) {
+        showNotification('Network error. Please try again.', 'danger');
+    } finally {
+        // Reset button states
+        if (sendBtn) {
+            sendBtn.classList.remove('loading');
+            sendBtn.disabled = false;
+        }
+        if (resendBtn) {
+            resendBtn.classList.remove('loading');
+            resendBtn.disabled = false;
+        }
+    }
+}
+
+async function verifyCode() {
+    const phoneNumber = document.getElementById('phoneNumber').value;
+    const code = document.getElementById('verificationCode').value;
+    const verifyBtn = document.getElementById('verifyCodeBtn');
+    
+    if (!code || code.length < 4) {
+        showNotification('Please enter the verification code', 'warning');
+        return;
+    }
+    
+    // Show loading state
+    if (verifyBtn) {
+        verifyBtn.classList.add('loading');
+        verifyBtn.disabled = true;
+    }
+    
+    try {
+        const response = await fetch('/api/users/verify_code/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify({ 
+                phone_number: phoneNumber, 
+                verification_code: code 
+            }),
+        });
+        
+        if (response.ok) {
+            showNotification('Phone number verified successfully!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            const error = await response.json();
+            showNotification('Invalid verification code. Please try again.', 'danger');
+        }
+    } catch (error) {
+        showNotification('Network error. Please try again.', 'danger');
+    } finally {
+        if (verifyBtn) {
+            verifyBtn.classList.remove('loading');
+            verifyBtn.disabled = false;
+        }
+    }
+}
+
+async function handleWakeupSubmit(e) {
+    e.preventDefault();
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const formData = {
+        scheduled_time: document.getElementById('scheduledTime').value,
+        contact_method: document.getElementById('contactMethod').value,
+        zip_code: document.getElementById('zipCode').value,
+    };
+    
+    // Validate form
+    if (!formData.scheduled_time) {
+        showNotification('Please select a date and time', 'warning');
+        return;
+    }
+    if (!formData.zip_code || formData.zip_code.length < 5) {
+        showNotification('Please enter a valid ZIP code', 'warning');
+        return;
+    }
+    
+    // Show loading state
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/wakeup-calls/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify(formData),
+        });
+        
+        if (response.ok) {
+            showNotification('Wake-up call scheduled successfully!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            const error = await response.json();
+            showNotification('Error: ' + (error.detail || error.message || 'Failed to schedule call'), 'danger');
+        }
+    } catch (error) {
+        showNotification('Network error. Please check your connection and try again.', 'danger');
+    } finally {
+        submitBtn.classList.remove('loading');
+        submitBtn.disabled = false;
+    }
+}
+
+// Notification helper function
+function showNotification(message, type = 'info') {
+    // Remove existing notifications first
+    const existingAlerts = document.querySelectorAll('.notification-alert');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show notification-alert`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        const bsAlert = new bootstrap.Alert(alertDiv);
+        bsAlert.close();
+    }, 5000);
+}
+</script>
+{% endblock %}

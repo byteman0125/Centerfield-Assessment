@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - Wake-up Call Service{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-sign-in-alt me-2"></i>
+                    Login
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                {% if form.errors %}
+                    <div class="alert alert-danger">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">
+                            <i class="fas fa-user me-2"></i>Username
+                        </label>
+                        {{ form.username }}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Password
+                        </label>
+                        {{ form.password }}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Login
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <h6 class="text-muted mb-3">Demo Accounts</h6>
+                    <div class="demo-accounts">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="demo-account bg-light p-2 rounded border">
+                                    <small class="fw-bold">Regular User</small><br>
+                                    <code>demo_user_1</code><br>
+                                    <small class="text-muted">Password: demo123</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="demo-account bg-light p-2 rounded border">
+                                    <small class="fw-bold">Admin User</small><br>
+                                    <code>admin</code><br>
+                                    <small class="text-muted">Password: admin123</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap classes to form fields
+    const usernameField = document.querySelector('#id_username');
+    const passwordField = document.querySelector('#id_password');
+    
+    if (usernameField) {
+        usernameField.className = 'form-control form-control-lg';
+        usernameField.placeholder = 'Enter your username';
+    }
+    
+    if (passwordField) {
+        passwordField.className = 'form-control form-control-lg';
+        passwordField.placeholder = 'Enter your password';
+    }
+});
+</script>
+{% endblock %}

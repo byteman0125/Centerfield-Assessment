@@ -1,0 +1,446 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .admin-dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-top: 20px;
+    }
+    
+    .dashboard-widget {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .dashboard-widget:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    
+    .widget-header {
+        background: #f8f9fa;
+        color: #212529;
+        border-bottom: 1px solid #e9ecef;
+        padding: 20px;
+        position: relative;
+    }
+    
+    .widget-header h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    .widget-header i {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        font-size: 2rem;
+        opacity: 0.3;
+    }
+    
+    .widget-content {
+        padding: 20px;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+        max-width: 100%;
+    }
+    
+    .stat-card {
+        text-align: center;
+        padding: 15px;
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        border-left: 3px solid #6c757d;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #212529;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #495057;
+        margin-top: 5px;
+    }
+    
+    .quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .quick-action-btn {
+        background: #6c757d;
+        color: #ffffff !important;
+        border: 1px solid #6c757d;
+        border-radius: 6px;
+        padding: 10px 16px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: box-shadow 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-shadow: none;
+    }
+    
+    .quick-action-btn:hover {
+        color: #ffffff !important;
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        background: #5a6268;
+    }
+    
+    .quick-action-btn i {
+        color: inherit !important;
+        opacity: 1 !important;
+    }
+    
+    .recent-activity {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .activity-item {
+        padding: 12px 0;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: white;
+    }
+    
+    .activity-content {
+        flex: 1;
+    }
+    
+    .activity-title {
+        font-weight: 600;
+        color: #212529;
+        margin-bottom: 4px;
+    }
+    
+    .activity-time {
+        font-size: 0.85rem;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block messages %}
+    {% if messages %}
+    <ul class="messagelist">{% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message|capfirst }}</li>
+    {% endfor %}</ul>
+    {% endif %}
+{% endblock messages %}
+
+{% block content %}
+<div id="content-main">
+    <h1 class="dashboard-title">
+        <i class="fas fa-tachometer-alt"></i>
+        Welcome to Wake-up Call Administration
+    </h1>
+    
+    <div class="admin-dashboard">
+        <!-- Users Widget -->
+        <div class="dashboard-widget">
+            <div class="widget-header">
+                <h3><i class="fas fa-users"></i> User Management</h3>
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="widget-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number">{{ total_users|default:"0" }}</span>
+                        <span class="stat-label">Total Users</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ verified_users|default:"0" }}</span>
+                        <span class="stat-label">Verified</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ unverified_users|default:"0" }}</span>
+                        <span class="stat-label">Unverified</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ verified_percentage|default:"0" }}%</span>
+                        <span class="stat-label">Verified %</span>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <a href="{% url 'admin:core_user_changelist' %}" class="quick-action-btn">
+                        <i class="fas fa-list"></i>
+                        View All Users
+                    </a>
+                    <a href="{% url 'admin:core_user_add' %}" class="quick-action-btn">
+                        <i class="fas fa-plus"></i>
+                        Add User
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Wake-up Calls Widget -->
+        <div class="dashboard-widget">
+            <div class="widget-header">
+                <h3><i class="fas fa-phone-volume"></i> Wake-up Calls</h3>
+                <i class="fas fa-phone-volume"></i>
+            </div>
+            <div class="widget-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number">{{ total_calls|default:"0" }}</span>
+                        <span class="stat-label">Total Calls</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ scheduled_calls|default:"0" }}</span>
+                        <span class="stat-label">Scheduled</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ completed_calls|default:"0" }}</span>
+                        <span class="stat-label">Completed</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ failed_calls|default:"0" }}</span>
+                        <span class="stat-label">Failed</span>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <a href="{% url 'admin:calls_wakeupcall_changelist' %}" class="quick-action-btn">
+                        <i class="fas fa-list"></i>
+                        View All Calls
+                    </a>
+                    <a href="{% url 'admin:calls_wakeupcall_add' %}" class="quick-action-btn">
+                        <i class="fas fa-plus"></i>
+                        Schedule Call
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Call Logs Widget -->
+        <div class="dashboard-widget">
+            <div class="widget-header">
+                <h3><i class="fas fa-chart-bar"></i> Call Logs</h3>
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="widget-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number">{{ total_logs|default:"0" }}</span>
+                        <span class="stat-label">Total Logs</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ successful_calls|default:"0" }}</span>
+                        <span class="stat-label">Successful</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ failed_logs|default:"0" }}</span>
+                        <span class="stat-label">Failed</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ no_answer_logs|default:"0" }}</span>
+                        <span class="stat-label">No Answer</span>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <a href="{% url 'admin:calls_calllog_changelist' %}" class="quick-action-btn">
+                        <i class="fas fa-list"></i>
+                        View Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Status Widget -->
+        <div class="dashboard-widget">
+            <div class="widget-header">
+                <h3><i class="fas fa-cogs"></i> System Status</h3>
+                <i class="fas fa-cogs"></i>
+            </div>
+            <div class="widget-content">
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Database</span>
+                        <span style="color: #48bb78; font-weight: 600;">✓ Active</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Redis Cache</span>
+                        <span style="color: #48bb78; font-weight: 600;">✓ Active</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Celery Worker</span>
+                        <span style="color: #48bb78; font-weight: 600;">✓ Running</span>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <a href="{% url 'admin:index' %}" class="quick-action-btn">
+                        <i class="fas fa-refresh"></i>
+                        Refresh Status
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="dashboard-widget" style="margin-top: 30px;">
+        <div class="widget-header">
+            <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="widget-content">
+            <div class="recent-activity">
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: #48bb78;">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Wake-up call completed</div>
+                        <div class="activity-time">2 minutes ago</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: #667eea;">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">New user registered</div>
+                        <div class="activity-time">15 minutes ago</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: #ed8936;">
+                        <i class="fas fa-calendar"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Call scheduled for tomorrow</div>
+                        <div class="activity-time">1 hour ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Access to Main Modules -->
+    {% if app_list %}
+    <div style="margin-top: 30px;">
+        <h2 style="color: #495057; margin-bottom: 20px;">
+            <i class="fas fa-th-large"></i>
+            Quick Access to All Modules
+        </h2>
+        {% for app in app_list %}
+        <div class="module">
+            <h2>
+                {% if app.app_url %}
+                <a href="{{ app.app_url }}" class="section">
+                    {% if app.name == "Core" %}
+                        <i class="fas fa-users"></i> {{ app.name }}
+                    {% elif app.name == "Calls" %}
+                        <i class="fas fa-phone-volume"></i> {{ app.name }}
+                    {% else %}
+                        <i class="fas fa-cube"></i> {{ app.name }}
+                    {% endif %}
+                </a>
+                {% endif %}
+            </h2>
+            {% if app.models %}
+            <table class="table">
+                {% for model in app.models %}
+                <tr class="model-{{ model.object_name|lower }}">
+                    {% if model.admin_url %}
+                    <th scope="row">
+                        <a href="{{ model.admin_url }}"{% if model.add_url %} class="addlink"{% endif %}>
+                            {% if model.name == "Users" %}
+                                <i class="fas fa-user"></i>
+                            {% elif model.name == "User profiles" %}
+                                <i class="fas fa-id-card"></i>
+                            {% elif model.name == "Wake up calls" %}
+                                <i class="fas fa-phone"></i>
+                            {% elif model.name == "Call logs" %}
+                                <i class="fas fa-chart-bar"></i>
+                            {% elif model.name == "Phone verifications" %}
+                                <i class="fas fa-mobile-alt"></i>
+                            {% else %}
+                                <i class="fas fa-cube"></i>
+                            {% endif %}
+                            {{ model.name }}
+                        </a>
+                    </th>
+                    {% else %}
+                    <th scope="row">{{ model.name }}</th>
+                    {% endif %}
+                    
+                    {% if model.add_url %}
+                    <td><a href="{{ model.add_url }}" class="addlink">
+                        <i class="fas fa-plus"></i>
+                        Add
+                    </a></td>
+                    {% else %}
+                    <td>&nbsp;</td>
+                    {% endif %}
+                    
+                    {% if model.admin_url %}
+                    {% if model.view_only %}
+                    <td><a href="{{ model.admin_url }}" class="viewlink">
+                        <i class="fas fa-eye"></i>
+                        View
+                    </a></td>
+                    {% else %}
+                    <td><a href="{{ model.admin_url }}" class="changelink">
+                        <i class="fas fa-edit"></i>
+                        Change
+                    </a></td>
+                    {% endif %}
+                    {% else %}
+                    <td>&nbsp;</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

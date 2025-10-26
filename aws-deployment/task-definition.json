@@ -1,0 +1,148 @@
+{
+  "family": "wakeupcall-app",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT-ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT-ID:role/wakeupcall-task-role",
+  "containerDefinitions": [
+    {
+      "name": "wakeupcall-web",
+      "image": "ACCOUNT-ID.dkr.ecr.REGION.amazonaws.com/wakeupcall:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "SECRET_KEY",
+          "value": "your-secret-key-here"
+        },
+        {
+          "name": "DEBUG",
+          "value": "False"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "TWILIO_ACCOUNT_SID",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/twilio/account-sid"
+        },
+        {
+          "name": "TWILIO_AUTH_TOKEN",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/twilio/auth-token"
+        },
+        {
+          "name": "TWILIO_PHONE_NUMBER",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/twilio/phone-number"
+        },
+        {
+          "name": "WEATHER_API_KEY",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/weather/api-key"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/database/password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "wakeupcall-logs",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "web"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/api/ || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    },
+    {
+      "name": "wakeupcall-celery",
+      "image": "ACCOUNT-ID.dkr.ecr.REGION.amazonaws.com/wakeupcall:latest",
+      "essential": false,
+      "command": ["celery", "-A", "wakeupcall", "worker", "-l", "info"],
+      "environment": [
+        {
+          "name": "SECRET_KEY",
+          "value": "your-secret-key-here"
+        },
+        {
+          "name": "DEBUG",
+          "value": "False"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "TWILIO_ACCOUNT_SID",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/twilio/account-sid"
+        },
+        {
+          "name": "TWILIO_AUTH_TOKEN",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/twilio/auth-token"
+        },
+        {
+          "name": "TWILIO_PHONE_NUMBER",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/twilio/phone-number"
+        },
+        {
+          "name": "WEATHER_API_KEY",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/weather/api-key"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/database/password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "wakeupcall-logs",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "celery-worker"
+        }
+      }
+    },
+    {
+      "name": "wakeupcall-celery-beat",
+      "image": "ACCOUNT-ID.dkr.ecr.REGION.amazonaws.com/wakeupcall:latest",
+      "essential": false,
+      "command": ["celery", "-A", "wakeupcall", "beat", "-l", "info"],
+      "environment": [
+        {
+          "name": "SECRET_KEY",
+          "value": "your-secret-key-here"
+        },
+        {
+          "name": "DEBUG",
+          "value": "False"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:ssm:REGION:ACCOUNT-ID:parameter/wakeupcall/database/password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "wakeupcall-logs",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "celery-beat"
+        }
+      }
+    }
+  ]
+}

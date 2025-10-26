@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Wake-up Call Service{% endblock %}
+
+{% block content %}
+<div class="hero-section p-5 rounded mb-4">
+    <div class="container text-center">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto">
+                <h1 class="display-4 fw-bold mb-3">
+                    <i class="fas fa-sunrise me-3"></i>
+                    Wake-up Call Service
+                </h1>
+                <p class="lead mb-4">Get personalized wake-up calls with current weather updates for your zip code</p>
+                {% if not user.is_authenticated %}
+                    <a class="btn btn-primary btn-lg px-4" href="{% url 'login' %}">
+                        <i class="fas fa-play-circle me-2"></i>
+                        Get Started Today
+                    </a>
+                {% else %}
+                    <div class="d-flex gap-3 justify-content-center">
+                        <a class="btn btn-primary btn-lg" href="{% url 'dashboard' %}">
+                            <i class="fas fa-plus-circle me-2"></i>
+                            Schedule New Call
+                        </a>
+                        <a class="btn btn-outline-secondary btn-lg" href="#my-calls">
+                            <i class="fas fa-list me-2"></i>
+                            View My Calls
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+<div id="my-calls" class="mb-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Your Scheduled Calls
+                </h2>
+                <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>
+                    Schedule New Call
+                </a>
+            </div>
+            
+            {% if wakeup_calls %}
+                <div class="calls-list">
+                    {% for call in wakeup_calls %}
+                    <div class="call-card card mb-3 shadow-sm">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        <div class="call-icon me-3">
+                                            {% if call.contact_method == 'call' %}
+                                                <i class="fas fa-phone"></i>
+                                            {% else %}
+                                                <i class="fas fa-sms"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <h5 class="mb-1 fw-bold">{{ call.scheduled_time|date:"M d, Y \a\t g:i A" }}</h5>
+                                            <p class="mb-1 text-muted">{{ call.phone_number }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <span class="badge bg-light border">
+                                            <i class="fas fa-map-marker-alt me-1"></i>
+                                            {{ call.zip_code }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <span class="badge fs-6 bg-light border mb-2">
+                                        <i class="fas fa-{% if call.contact_method == 'call' %}phone{% else %}sms{% endif %} me-1"></i>
+                                        {{ call.contact_method|upper }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">Status: {{ call.status|title }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state card text-center py-5">
+                    <div class="card-body">
+                        <i class="fas fa-calendar-plus fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted mb-3">No wake-up calls scheduled yet</h4>
+                        <p class="text-muted mb-4">Get started by scheduling your first wake-up call with weather updates!</p>
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus-circle me-2"></i>
+                            Schedule Your First Call
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="stats-card card h-100">
+                <div class="card-header bg-light border-bottom">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Your Account Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="stat-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Total Scheduled Calls:</span>
+                            <span class="badge bg-primary fs-6">{{ wakeup_calls|length }}</span>
+                        </div>
+                    </div>
+                    <div class="stat-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Phone Verified:</span>
+                            {% if user.is_phone_verified %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>
+                                    Verified
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    Not Verified
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if user.profile %}
+                    <div class="stat-item mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Weather Location:</span>
+                            <span class="text-muted">{{ user.profile.zip_code|default:"Not set" }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if not user.is_phone_verified %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        You need to verify your phone number to schedule calls.
+                        <a href="{% url 'dashboard' %}" class="alert-link">Verify now →</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="features-section">
+    <div class="row mb-5">
+        <div class="col-12 text-center mb-4">
+            <h2 class="display-5 fw-bold">How It Works</h2>
+            <p class="lead text-muted">Simple steps to get your personalized wake-up service</p>
+        </div>
+    </div>
+    
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+                    <div class="feature-card card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-phone-volume fa-3x text-muted"></i>
+                    </div>
+                    <h5 class="card-title">1. Phone Calls</h5>
+                    <p class="card-text">Receive voice calls with weather updates and interactive menus. Use keypad to reschedule or change settings.</p>
+                    <div class="feature-highlights">
+                        <small class="text-muted">
+                            <i class="fas fa-check me-1"></i>
+                            Interactive voice menus
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="feature-card card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-sms fa-3x text-muted"></i>
+                    </div>
+                    <h5 class="card-title">2. Text Messages</h5>
+                    <p class="card-text">Get SMS wake-up messages with current weather conditions delivered right to your phone.</p>
+                    <div class="feature-highlights">
+                        <small class="text-muted">
+                            <i class="fas fa-check me-1"></i>
+                            Quick weather updates
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="feature-card card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-cloud-sun fa-3x text-muted"></i>
+                    </div>
+                    <h5 class="card-title">3. Weather Updates</h5>
+                    <p class="card-text">Get current weather conditions for your zip code with every wake-up call or message.</p>
+                    <div class="feature-highlights">
+                        <small class="text-muted">
+                            <i class="fas fa-check me-1"></i>
+                            Real-time weather data
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8 mx-auto text-center">
+            <div class="cta-section bg-light p-5 rounded">
+                <h3 class="mb-3">Ready to Get Started?</h3>
+                <p class="text-muted mb-4">It only takes a minute to set up your first wake-up call</p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a class="btn btn-primary btn-lg" href="{% url 'login' %}">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        Login to Start
+                    </a>
+                    <div class="demo-credentials">
+                        <small class="text-muted">Demo login: demo_user_1 / demo123</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
